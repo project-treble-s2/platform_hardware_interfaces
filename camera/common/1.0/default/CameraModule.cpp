@@ -28,6 +28,10 @@ namespace camera {
 namespace common {
 namespace V1_0 {
 namespace helper {
+	
+namespace {
+	bool isReady = false;
+} // anonymous namespace
 
 void CameraModule::deriveCameraCharacteristicsKeys(
         uint32_t deviceVersion, CameraMetadata &chars) {
@@ -264,7 +268,14 @@ int CameraModule::init() {
         res = mModule->init();
         ATRACE_END();
     }
-    mCameraInfoMap.setCapacity(getNumberOfCameras());
+	int camNum = getNumberOfCameras();
+	if (camNum == -123) {
+		camNum = 0
+	} else {
+		isReady = true;
+	}
+	
+    mCameraInfoMap.setCapacity(camNum);
     return res;
 }
 
@@ -275,6 +286,11 @@ int CameraModule::getCameraInfo(int cameraId, struct camera_info *info) {
         ALOGE("%s: Invalid camera ID %d", __FUNCTION__, cameraId);
         return -EINVAL;
     }
+	
+	if (!isReady) {
+		ALOGW("CameraModule::getCameraInfo(): Not ready; Returning OK");
+		return OK;
+	}
 
     // Only override static_camera_characteristics for API2 devices
     int apiVersion = mModule->common.module_api_version;
